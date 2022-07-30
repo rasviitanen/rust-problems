@@ -7,6 +7,14 @@ A task provider for rust tasks that uses a custom problem matcher to provide add
 * The probblem view will includes `note` messages as `NOTE` attachments
 * The probblem view will includes additional spans as `SPAN` attachments
 
+
+## Example
+
+Here is an example with an included span and help attachment:
+
+![Example](example.png)
+
+By clicking the lightbulb (or any quick-fix hotkey), you get an option to fix this issue automatically by letting vscode replace `my_const` with `MY_CONST`.
 ## Why?
 
 When using `rust-analyzer` and their provided pattern matchers, some information is unforunately lost in the void. For example, the `notes`, `help` and additonal `spans` are erased and you end up with only the top-level message in your problems view. Another issue with `r-a` is that some quick-fixes aren't suggested, such as automatically inserting missing lifetimes. 
@@ -74,11 +82,3 @@ struct MissingLifetime<'a> {
     foo: &'a str,
 }
 ```
-
-## Example
-
-Here is an example with an included span and help attachment:
-
-![Example](example.png)
-
-By clicking the lightbulb (or any quick-fix hotkey), you get an option to fix this issue automatically by replacing `my_const` with `MY_CONST`.
