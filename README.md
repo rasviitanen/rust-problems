@@ -63,7 +63,7 @@ The error view receives this information:
 }
 ```
 
-But with `Rust Problems` we can squeezy out some extra information:
+But with `Rust Problems` we can squeeze in some extra information:
 
 ```json
 {
