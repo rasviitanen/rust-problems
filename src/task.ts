@@ -38,12 +38,12 @@ export class CustomBuildTaskProvider implements vscode.TaskProvider {
 
         this.tasks = [];
         const commands: Command[] = [
-            { name: "cargo check", command: "check --quiet --message-format json" },
-            { name: "cargo check --all-targets", command: "check --all-targets --quiet --message-format json" },
-            { name: "cargo build", command: "build --quiet --message-format json" },
-            { name: "cargo build --release", command: "build --release --quiet --message-format json" },
-            { name: "cargo clippy", command: "clippy --quiet --message-format json" },
-            { name: "cargo clippy --all-targets", command: "clippy --all-targets --quiet --message-format json" },
+            { name: "cargo check", command: "check --message-format json" },
+            { name: "cargo check --all-targets", command: "check --all-targets --message-format json" },
+            { name: "cargo build", command: "build --message-format json" },
+            { name: "cargo build --release", command: "build --release --message-format json" },
+            { name: "cargo clippy", command: "clippy --message-format json" },
+            { name: "cargo clippy --all-targets", command: "clippy --all-targets --message-format json" },
         ];
 
         commands.forEach(command => {
