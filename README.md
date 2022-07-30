@@ -20,14 +20,14 @@ By clicking the lightbulb (or any quick-fix hotkey), you get an option to fix th
 ### Installation
 
 1. Download the latest release from our [releases](https://github.com/rasviitanen/rust-problems/releases)
-2. Open vscode and press `ctrl + shift + p` to open the command pallete
+2. Open vscode and press `ctrl + shift + p` to open the command palette
 3. Seach for and run `Extensions: Install from VSIX`
 4. Select the downloaded extension
 5. All done!
 
 ### Usage
 
-1. Open vscode and press `ctrl + shift + p` to open the command pallete
+1. Open vscode and press `ctrl + shift + p` to open the command palette
 2. Search for `Tasks: Run Task`
 3. Move the cursor to the `rust-problem` collection, hit enter
 4. Pick your task and run it!
