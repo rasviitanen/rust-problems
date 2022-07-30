@@ -150,7 +150,9 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                                     const childLocation = new vscode.Location(vscode.Uri.parse(`${this.workspaceRoot}/${childLeafSpan.file_name}`), spanToRange(childLeafSpan));
 
                                     let textEdits: Map<vscode.Uri, vscode.TextEdit[]> = new Map();
+                                    let fixString = "";
                                     child.spans.filter(span => span.suggested_replacement).forEach(span => {
+                                        fixString = span.suggested_replacement!;
                                         const replaceRange = spanToRange(span);
                                         const replaceDocumentUri = vscode.Uri.parse(`${this.workspaceRoot}/${span.file_name}`);
                                         const prevFixes = textEdits.get(replaceDocumentUri) || [];
@@ -158,7 +160,7 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                                         textEdits.set(replaceDocumentUri, prevFixes);
                                     });
                                     if (textEdits.size > 0) {
-                                        const fix = new vscode.CodeAction(`FIX: ${child.message}`, vscode.CodeActionKind.QuickFix);
+                                        const fix = new vscode.CodeAction(`FIX: ${child.message}: ${fixString}`, vscode.CodeActionKind.QuickFix);
                                         fix.diagnostics = [diagnostic];
                                         fix.edit = new vscode.WorkspaceEdit();
                                         textEdits.forEach((edits, uri) => {
@@ -167,7 +169,7 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                                         fixes.push(fix);
                                     }
 
-                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(childLocation, `${child.level.toUpperCase()}: ${child.message}`));
+                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(childLocation, `${child.level.toUpperCase()}: ${child.message}: ${fixString}`));
                                 } else {
                                     diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(new vscode.Location(vscode.Uri.parse(`${this.workspaceRoot}/${leafSpan.file_name}`), range), `${child.level.toUpperCase()}: ${child.message}`));
                                 }
