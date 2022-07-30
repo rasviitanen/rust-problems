@@ -140,6 +140,7 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                             if (parsed.message.code) {
                                 diagnostic.code = parsed.message.code.code;
                             }
+                            diagnostic.source = "rustc";
                             diagnostic.relatedInformation = [];
 
                             const children = parsed.message.children;
