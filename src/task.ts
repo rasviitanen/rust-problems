@@ -58,9 +58,6 @@ export class CustomBuildTaskProvider implements vscode.TaskProvider {
                 type: CustomBuildTaskProvider.rustProblemTaskType,
                 command: command.command,
             };
-            definition.presentation = {
-                reveal: "never",
-            };
         }
 
         const task = new vscode.Task(definition, vscode.TaskScope.Workspace, command.name,
@@ -78,8 +75,14 @@ export class CustomBuildTaskProvider implements vscode.TaskProvider {
 }
 
 
-const formatText = (text: string) => {
-    return `${text.replace(/[\n\r]/g, '\r\n')}`;
+const formatText = (text: string): string => {
+    const compiler = text.match("\"reason\":\"([^\"]*)");
+    if (!compiler) {
+        return text.replace(/[\n\r]/g, '\r\n');
+    }
+    const v = text.match("\"rendered\":\"([^\"]*)");
+    const rendered = v ? v[1].replace(/\\n/g, '\r\n') || "" : "";
+    return rendered;
 };
 
 const spanToRange = (span: Span): vscode.Range => {
