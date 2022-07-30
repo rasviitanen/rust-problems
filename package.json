@@ -2,6 +2,9 @@
 	"name": "rust-problems",
 	"displayName": "Rust Problems",
 	"description": "Task provider for rust with enhanced problem handling",
+	"repository": "https://github.com/rasviitanen/rust-problems",
+	"license": "MIT",
+	"icon": "icon.png",
 	"version": "0.0.1",
 	"engines": {
 		"vscode": "^1.69.0"

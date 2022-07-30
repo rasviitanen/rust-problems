@@ -11,9 +11,28 @@ A task provider for rust tasks that uses a custom problem matcher to provide add
 
 Here is an example with an included span and help attachment:
 
-![Example](example.png)
+![Example](https://github.com/rasviitanen/rust-problems/raw/main/example.png)
 
 By clicking the lightbulb (or any quick-fix hotkey), you get an option to fix this issue automatically by letting vscode replace `my_const` with `MY_CONST`.
+
+## How to install & Use
+
+### Installation
+
+1. Download the latest release from our [releases](https://github.com/rasviitanen/rust-problems/releases)
+2. Open vscode and press `ctrl + shift + p` to open the command pallete
+3. Seach for and run `Extensions: Install from VSIX`
+4. Select the downloaded extension
+5. All done!
+
+### Usage
+
+1. Open vscode and press `ctrl + shift + p` to open the command pallete
+2. Search for `Tasks: Run Task`
+3. Move the cursor to the `rust-problem` collection, hit enter
+4. Pick your task and run it!
+5. Upen up the problems view to see the encountered warnings and errors (`ctrl + shift + m`)
+6. You can view the raw output in a terminal tab
 
 ## Why?
 
