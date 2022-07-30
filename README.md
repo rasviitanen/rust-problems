@@ -3,9 +3,9 @@
 A task provider for rust tasks that uses a custom problem matcher to provide additional information and quick-fix solutions for problems.
 
 * Includes quick-fixes for problems even if the fixes aren't guaranteed to be correct
-* The probblem view will includes `help` messages as `HELP` attachments
-* The probblem view will includes `note` messages as `NOTE` attachments
-* The probblem view will includes additional spans as `SPAN` attachments
+* The probblem view will include `help` messages as `HELP` attachments
+* The probblem view will include `note` messages as `NOTE` attachments
+* The probblem view will include additional spans as `SPAN` attachments
 
 ## Example
 
