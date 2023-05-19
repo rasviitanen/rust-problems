@@ -7,10 +7,12 @@ export interface Diagnostic {
 export interface Message {
     code: Code | null,
     children: Child[],
-    level: "error" | "info" | "help" | "warning" | "note",
-    message: "string",
+    message: string,
+    level: Level,
+    rendered: string,
     spans: Span[],
 };
+
 
 export interface Code {
     code: string,
@@ -20,10 +22,29 @@ export interface Code {
 export interface Child {
     children: Child[],
     code: string | null,
-    level: "error" | "info" | "help" | "warning" | "note",
+    level: Level,
     message: string,
     spans: Span[],
 };
+
+export type Level = "error" | "info" | "help" | "warning" | "note"
+
+export function toIcon(level: Level): string {
+    switch (level) {
+        case "error":
+            return "❌"
+        case "info":
+            return "ℹ"
+        case "help":
+            return "💡"
+        case "warning":
+            return "⚠"
+        case "note":
+            return "📃"
+        default:
+            return "?"
+    }
+}
 
 export interface Span {
     byte_end: number,

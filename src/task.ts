@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
-import { Diagnostic, Span } from './rust';
+import { Diagnostic, Span, toIcon } from './rust';
 
 interface CustomBuildTaskDefinition extends vscode.TaskDefinition {
     command: string;
@@ -38,13 +38,14 @@ export class CustomBuildTaskProvider implements vscode.TaskProvider {
 
         this.tasks = [];
         const commands: Command[] = [
-            { name: "cargo check", command: "check --message-format json" },
-            { name: "cargo check --all-targets", command: "check --all-targets --message-format json" },
-            { name: "cargo check --all-features --all-targets", command: "check --all-targets --all-features --message-format json" },
-            { name: "cargo build", command: "build --message-format json" },
-            { name: "cargo build --release", command: "build --release --message-format json" },
-            { name: "cargo clippy", command: "clippy --message-format json" },
-            { name: "cargo clippy --all-targets", command: "clippy --all-targets --message-format json" },
+            { name: "cargo test", command: "test --message-format json-diagnostic-rendered-ansi" },
+            { name: "cargo check", command: "check --message-format json-diagnostic-rendered-ansi" },
+            { name: "cargo check --all-targets", command: "check --all-targets --message-format json-diagnostic-rendered-ansi" },
+            { name: "cargo check --all-features --all-targets", command: "check --all-targets --all-features --message-format json-diagnostic-rendered-ansi" },
+            { name: "cargo build", command: "build --message-format json-diagnostic-rendered-ansi" },
+            { name: "cargo build --release", command: "build --release --message-format json-diagnostic-rendered-ansi" },
+            { name: "cargo clippy", command: "clippy --message-format json-diagnostic-rendered-ansi" },
+            { name: "cargo clippy --all-targets", command: "clippy --all-targets --message-format json-diagnostic-rendered-ansi" },
         ];
 
         commands.forEach(command => {
@@ -75,16 +76,6 @@ export class CustomBuildTaskProvider implements vscode.TaskProvider {
     }
 }
 
-
-const formatText = (text: string): string => {
-    const compiler = text.match("\"reason\":\"([^\"]*)");
-    if (!compiler) {
-        return text.replace(/[\n\r]/g, '\r\n');
-    }
-    const v = text.match("\"rendered\":\"([^\"]*)");
-    const rendered = v ? v[1].replace(/\\n/g, '\r\n') || "" : "";
-    return rendered;
-};
 
 const spanToRange = (span: Span): vscode.Range => {
     return new vscode.Range(span.line_start - 1, span.column_start - 1, span.line_end - 1, span.column_end - 1);
@@ -124,6 +115,14 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                 diagnostics.forEach(diagnostic => {
                     try {
                         const parsed = JSON.parse(diagnostic) as Diagnostic;
+
+                        if (parsed.message.rendered) {
+                            parsed.message.rendered.split(/\r?\n/).forEach(value => {
+                                this.writeEmitter.fire(value);
+                                this.writeEmitter.fire("\r\n");
+                            })
+                        }
+
                         if (parsed.message && parsed.message.spans.length > 0) {
                             const leafSpan = parsed.message.spans[parsed.message.spans.length - 1];
                             const range = spanToRange(leafSpan);
@@ -151,20 +150,20 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                             children.forEach(child => {
                                 if (child.spans.length > 0) {
                                     const childLeafSpan = child.spans[child.spans.length - 1];
-                                    const childLocation = new vscode.Location(vscode.Uri.parse(`${this.workspaceRoot}/${childLeafSpan.file_name}`), spanToRange(childLeafSpan));
+                                    const childLocation = new vscode.Location(vscode.Uri.file(`${this.workspaceRoot}/${childLeafSpan.file_name}`), spanToRange(childLeafSpan));
 
                                     let textEdits: Map<vscode.Uri, vscode.TextEdit[]> = new Map();
                                     let fixString = "";
                                     child.spans.filter(span => span.suggested_replacement).forEach(span => {
                                         fixString = span.suggested_replacement!;
                                         const replaceRange = spanToRange(span);
-                                        const replaceDocumentUri = vscode.Uri.parse(`${this.workspaceRoot}/${span.file_name}`);
+                                        const replaceDocumentUri = vscode.Uri.file(`${this.workspaceRoot}/${span.file_name}`);
                                         const prevFixes = textEdits.get(replaceDocumentUri) || [];
                                         prevFixes.push(new vscode.TextEdit(replaceRange, span.suggested_replacement!));
                                         textEdits.set(replaceDocumentUri, prevFixes);
                                     });
                                     if (textEdits.size > 0) {
-                                        const fix = new vscode.CodeAction(`FIX: ${child.message}: ${fixString}`, vscode.CodeActionKind.QuickFix);
+                                        const fix = new vscode.CodeAction(`${child.message}: ${fixString}`, vscode.CodeActionKind.QuickFix);
                                         fix.diagnostics = [diagnostic];
                                         fix.edit = new vscode.WorkspaceEdit();
                                         textEdits.forEach((edits, uri) => {
@@ -173,16 +172,16 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                                         fixes.push(fix);
                                     }
 
-                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(childLocation, `${child.level.toUpperCase()}: ${child.message}: ${fixString}`));
+                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(childLocation, `${toIcon(child.level)} ${child.message}: ${fixString}`));
                                 } else {
-                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(new vscode.Location(vscode.Uri.parse(`${this.workspaceRoot}/${leafSpan.file_name}`), range), `${child.level.toUpperCase()}: ${child.message}`));
+                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(new vscode.Location(vscode.Uri.file(`${this.workspaceRoot}/${leafSpan.file_name}`), range), `${toIcon(child.level)} ${child.message}`));
                                 }
                             });
 
                             parsed.message.spans.forEach(span => {
                                 if (span.label) {
-                                    const location = new vscode.Location(vscode.Uri.parse(`${this.workspaceRoot}/${span.file_name}`), spanToRange(span));
-                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(location, `SPAN: ${span.label}`));
+                                    const location = new vscode.Location(vscode.Uri.file(`${this.workspaceRoot}/${span.file_name}`), spanToRange(span));
+                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(location, `☰ ${span.label}`));
                                 }
                             });
 
@@ -195,10 +194,9 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
 
 
                 this.rustFixProvider.fixes = fixes;
-                this.writeEmitter.fire(formatText(stdout));
-                this.writeEmitter.fire(formatText(stderr));
+                this.writeEmitter.fire(stderr);
                 reportDiagnostics.forEach((diagnostics, file) => {
-                    this.rustProblemDiagnostics.set(vscode.Uri.parse(`${this.workspaceRoot}/${file}`), diagnostics);
+                    this.rustProblemDiagnostics.set(vscode.Uri.file(`${this.workspaceRoot}/${file}`), diagnostics);
                 });
 
                 this.closeEmitter.fire(0);
