@@ -107,7 +107,7 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
         return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
             cp.exec(command, options, (error, stdout, stderr) => {
                 this.rustProblemDiagnostics.clear();
-                const fixes: vscode.CodeAction[] = [];
+                this.rustFixProvider.fixes = [];
 
                 let diagnostics = stdout.split('\n');
                 let reportDiagnostics: Map<string, vscode.Diagnostic[]> = new Map();
@@ -120,7 +120,7 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                             parsed.message.rendered.split(/\r?\n/).forEach(value => {
                                 this.writeEmitter.fire(value);
                                 this.writeEmitter.fire("\r\n");
-                            })
+                            });
                         }
 
                         if (parsed.message && parsed.message.spans.length > 0) {
@@ -151,32 +151,25 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                                 if (child.spans.length > 0) {
                                     const childLeafSpan = child.spans[child.spans.length - 1];
                                     const childLocation = new vscode.Location(vscode.Uri.file(`${this.workspaceRoot}/${childLeafSpan.file_name}`), spanToRange(childLeafSpan));
-
-                                    let textEdits: Map<vscode.Uri, vscode.TextEdit[]> = new Map();
-                                    let fixString = "";
-                                    child.spans.filter(span => span.suggested_replacement).forEach(span => {
-                                        fixString = span.suggested_replacement!;
+                                    child.spans.filter(span => span.suggested_replacement !== null).forEach((span, idx) => {
                                         const replaceRange = spanToRange(span);
                                         const replaceDocumentUri = vscode.Uri.file(`${this.workspaceRoot}/${span.file_name}`);
-                                        const prevFixes = textEdits.get(replaceDocumentUri) || [];
-                                        prevFixes.push(new vscode.TextEdit(replaceRange, span.suggested_replacement!));
-                                        textEdits.set(replaceDocumentUri, prevFixes);
-                                    });
-                                    if (textEdits.size > 0) {
-                                        const fix = new vscode.CodeAction(`${child.message}: ${fixString}`, vscode.CodeActionKind.QuickFix);
+                                        const fix = new vscode.CodeAction(child.message || span.suggested_replacement || "???", vscode.CodeActionKind.QuickFix);
                                         fix.diagnostics = [diagnostic];
+                                        fix.isPreferred = idx === 0;
                                         fix.edit = new vscode.WorkspaceEdit();
-                                        textEdits.forEach((edits, uri) => {
-                                            fix.edit!.set(uri, edits);
-                                        });
-                                        fixes.push(fix);
-                                    }
+                                        fix.edit!.set(replaceDocumentUri, [new vscode.TextEdit(replaceRange, span.suggested_replacement!)]);
+                                        this.rustFixProvider.fixes.push(fix);
+                                    });
 
-                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(childLocation, `${toIcon(child.level)} ${child.message}: ${fixString}`));
+                                    diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(childLocation, `${toIcon(child.level)} ${child.message}`));
                                 } else {
                                     diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(new vscode.Location(vscode.Uri.file(`${this.workspaceRoot}/${leafSpan.file_name}`), range), `${toIcon(child.level)} ${child.message}`));
                                 }
+
+                                children.concat(child.children);
                             });
+
 
                             parsed.message.spans.forEach(span => {
                                 if (span.label) {
@@ -192,9 +185,6 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                     } catch { }
                 });
 
-
-                this.rustFixProvider.fixes = fixes;
-                this.writeEmitter.fire(stderr);
                 reportDiagnostics.forEach((diagnostics, file) => {
                     this.rustProblemDiagnostics.set(vscode.Uri.file(`${this.workspaceRoot}/${file}`), diagnostics);
                 });
@@ -225,13 +215,25 @@ export class RustFixProvider implements vscode.CodeActionProvider {
 
     public static readonly providedCodeActionKinds = [
         vscode.CodeActionKind.QuickFix,
+        vscode.CodeActionKind.Refactor,
     ];
 
-    provideCodeActions(_document: vscode.TextDocument, _range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
-        return this.fixes.filter(fix => {
+    provideCodeActions(document: vscode.TextDocument, range: vscode.Range | vscode.Selection, context: vscode.CodeActionContext, _token: vscode.CancellationToken): vscode.CodeAction[] {
+        let hints = this.fixes.filter(fix => {
             return context.diagnostics.includes(fix.diagnostics![0]!);
         }).map(fix => {
             return fix;
         });
+
+        const refactor = new vscode.CodeAction(`[rust-problem] Refactor`, vscode.CodeActionKind.Refactor);
+        refactor.edit = new vscode.WorkspaceEdit();
+        refactor.edit!.set(document.uri, hints.filter(fix => fix.isPreferred && fix.diagnostics?.find(diag => range.intersection(diag.range))).flatMap(fix => fix.edit?.get(document.uri) || []));
+
+        if (hints.length > 0) {
+            return [...hints, refactor];
+        } else {
+            return [];
+        }
     }
 }
+
