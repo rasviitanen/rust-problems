@@ -1,21 +1,42 @@
 # Rust Problems
 
-A task provider for rust tasks that uses a custom problem matcher to provide additional information and quick-fix solutions for problems.
+A task provider for rust tasks that uses a custom problem matcher to provide additional information, quick-fix solutions and refactorings for warnings and compile errors.
 
 * Includes quick-fixes for problems even if the fixes aren't guaranteed to be correct
-* The probblem view will include `help` messages as `HELP` attachments
-* The probblem view will include `note` messages as `NOTE` attachments
-* The probblem view will include additional spans as `SPAN` attachments
+* The problem view will include `help` attachments
+* The problem view will include `note` attachments
+* The problem view will include additional spans as attachments
 
 ## Example
 
-Here is an example with an included span and help attachment:
+![Example](example.png)
 
-![Example](https://github.com/rasviitanen/rust-problems/raw/main/example.png)
+![Problem Explorer](problems.png)
 
-By clicking the lightbulb (or any quick-fix hotkey), you get an option to fix this issue automatically by letting vscode replace `my_const` with `MY_CONST`.
+## Refactor
 
-## How to install & Use
+rust-problem will inject a custom refactoring suggestion based on your current selection. This allows you to apply multiple problem suggestions at once.
+
+![Refactor](refactor.png)
+
+![Result](result.png)
+
+## Autofix
+
+Some problems will be marked as preferred, which makes them work with vscode's auto fix. The default shortcut is `shift + alt + .`, but you can overwrite it with something like this, then all you have to do is to place your cursor at the problem and hit `alt+f`.
+
+```json
+{
+    "key": "alt+f",
+    "command": "editor.action.autoFix",
+    "when": "editorTextFocus && !editorReadonly && supportedCodeAction =~ /(\\s|^)quickfix\\b/",
+    "args": {
+        "apply": "first"
+    }
+},
+```
+
+## How to Install & Use
 
 ### Installation
 
