@@ -151,16 +151,35 @@ class CustomBuildTaskTerminal implements vscode.Pseudoterminal {
                                 if (child.spans.length > 0) {
                                     const childLeafSpan = child.spans[child.spans.length - 1];
                                     const childLocation = new vscode.Location(vscode.Uri.file(`${this.workspaceRoot}/${childLeafSpan.file_name}`), spanToRange(childLeafSpan));
-                                    child.spans.filter(span => span.suggested_replacement !== null).forEach((span, idx) => {
-                                        const replaceRange = spanToRange(span);
-                                        const replaceDocumentUri = vscode.Uri.file(`${this.workspaceRoot}/${span.file_name}`);
-                                        const fix = new vscode.CodeAction(child.message || span.suggested_replacement || "???", vscode.CodeActionKind.QuickFix);
-                                        fix.diagnostics = [diagnostic];
-                                        fix.isPreferred = idx === 0;
+                                    const hasDuplicates = new Set(child.spans.filter(span => {
+                                        return span.byte_start;
+                                    })).size !== child.spans.length;
+
+                                    if (hasDuplicates) {
+                                        child.spans.filter(span => span.suggested_replacement !== null).forEach((span, idx) => {
+                                            const replaceRange = spanToRange(span);
+                                            const replaceDocumentUri = vscode.Uri.file(`${this.workspaceRoot}/${span.file_name}`);
+                                            const fix = new vscode.CodeAction(span.suggested_replacement || "???", vscode.CodeActionKind.QuickFix);
+                                            fix.edit = new vscode.WorkspaceEdit();
+                                            fix.diagnostics = [diagnostic];
+                                            fix.isPreferred = idx === 0;
+                                            fix.edit!.set(replaceDocumentUri, [new vscode.TextEdit(replaceRange, span.suggested_replacement!)]);
+                                            this.rustFixProvider.fixes.push(fix);
+                                        });
+                                    } else {
+                                        const fix = new vscode.CodeAction(child.message || "???", vscode.CodeActionKind.QuickFix);
                                         fix.edit = new vscode.WorkspaceEdit();
-                                        fix.edit!.set(replaceDocumentUri, [new vscode.TextEdit(replaceRange, span.suggested_replacement!)]);
+                                        fix.diagnostics = [diagnostic];
+                                        fix.isPreferred = true;
+                                        child.spans.filter(span => span.suggested_replacement !== null).forEach((span, idx) => {
+                                            const replaceRange = spanToRange(span);
+                                            const replaceDocumentUri = vscode.Uri.file(`${this.workspaceRoot}/${span.file_name}`);
+                                            fix.edit!.set(replaceDocumentUri, [new vscode.TextEdit(replaceRange, span.suggested_replacement!)]);
+                                        });
                                         this.rustFixProvider.fixes.push(fix);
-                                    });
+
+
+                                    }
 
                                     diagnostic.relatedInformation!.push(new vscode.DiagnosticRelatedInformation(childLocation, `${toIcon(child.level)} ${child.message}`));
                                 } else {
